@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Tomachi Boat Race</title>
+    <!-- Add PixiJS library -->
+    <script src="https://pixijs.download/v6.5.8/pixi.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            background: #74ccf4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #raceCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #controls {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.92);
+            padding: 1.5rem 2.5rem 2.5rem; /* Reduced top padding */
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            transition: all 0.3s ease;
+            z-index: 3;
+            border: 2px solid #1E90FF;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+
+        #controls h1 {
+            display: none; /* Hide the text title */
+        }
+
+        #controls .logo {
+            max-width: 200px; /* Reduced from 300px */
+            width: 100%;
+            height: auto;
+            margin-bottom: 15px; /* Reduced from 20px */
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .controls-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #teamSelectors {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* Changed to fixed 2 columns */
+            gap: 15px;
+            margin: 5px 0;
+            justify-items: start;
+        }
+
+        .team-select {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #e5f2ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .team-select:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .team-select input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .team-select label {
+            font-weight: bold;
+            color: #003366;
+            cursor: pointer;
+        }
+
+        .control-btn {
+            background: linear-gradient(to bottom, #1E90FF, #1873CC);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(to bottom, #1873CC, #1560BD);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        #startButton {
+            background: linear-gradient(to bottom, #22c55e, #16a34a);
+            font-size: 1.3em;
+            padding: 15px 40px;
+            margin-top: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 0px;
+        }
+
+        #startButton:hover {
+            background: linear-gradient(to bottom, #16a34a, #15803d);
+        }
+
+        .water {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 90%; /* Increased from 80% to 90% */
+            background: transparent; /* Set to transparent as PixiJS will draw this */
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        #raceProgress {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px 25px;
+            border-radius: 30px;
+            display: none;
+            z-index: 3;
+            font-weight: bold;
+            color: #003366;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            border: 2px solid #1E90FF;
+            font-size: 1.1em;
+        }
+        
+        #resultsScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            z-index: 4;
+            border: 3px solid #1E90FF;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        #resultsScreen h2 {
+            color: #003366;
+            margin-bottom: 20px;
+            font-size: 2em;
+            text-align: center;
+            border-bottom: 2px solid #1E90FF;
+            padding-bottom: 10px;
+        }
+        
+        .result-item {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 10px;
+            background: #e5f2ff;
+            transition: transform 0.2s;
+        }
+        
+        .result-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .position {
+            font-size: 1.5em;
+            font-weight: bold;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+        
+        .position-1 {
+            background: gold;
+            color: #333;
+        }
+        
+        .position-2 {
+            background: silver;
+            color: #333;
+        }
+        
+        .position-3 {
+            background: #cd7f32; /* Bronze */
+            color: white;
+        }
+        
+        .position-other {
+            background: #1E90FF;
+            color: white;
+        }
+        
+        .team-name {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .mini-boat {
+            width: 60px;
+            height: 40px;
+            margin-right: 15px;
+            object-fit: contain;
+        }
+        
+        #playAgainBtn {
+            background: linear-gradient(to bottom, #22c55e, #16a34a);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin-top: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        #playAgainBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(to bottom, #16a34a, #15803d);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div class="water" id="waterContainer"></div>
+        <div id="controls">
+            <img src="./assets/images/logo.png" alt="Tomachi Boat Race" class="logo">
+            <div class="control-buttons">
+                <button class="control-btn" onclick="selectAll(true)">Select All</button>
+                <button class="control-btn" onclick="selectAll(false)">Deselect All</button>
+            </div>
+            <div id="teamSelectors"></div>
+            <button id="startButton" class="control-btn" onclick="startRace()">Start Race!</button>
+        </div>
+        <div id="raceProgress">⚓ Race in Progress... ⚓</div>
+        <div id="resultsScreen">
+            <h2>Race Results</h2>
+            <div id="resultsList"></div>
+            <button id="playAgainBtn" onclick="hideResults()">Race Again!</button>
+        </div>
+    </div>
+
+    <script>
+        // PixiJS globals
+        let app;
+        let waterContainer;
+        let waterGraphics = [];
+        let boatsContainer;
+        let finishLineContainer;
+        let boats = [];
+        let finishedBoats = [];
+        let textures = {};
+        let raceInProgress = false;
+        let waterHeight;
+        let finishX;
+        let waterTop;
+        let waterTextures = [];
+        let waterSparkles = [];
+        const displacementTextures = [];
+        let displacementSprite;
+        let waterDisplacementFilter;
+        let cameraX = 0;
+        let targetCameraX = 0;
+        
+        // Initialize PixiJS app
+        function initPixiApp() {
+            // Create PixiJS application
+            app = new PIXI.Application({
+                width: window.innerWidth,
+                height: window.innerHeight,
+                backgroundColor: 0x87CEEB, // Changed to match sky color
+                resolution: window.devicePixelRatio || 1,
+                antialias: true,
+                autoDensity: true
+            });
+            
+            // Add the app view to the page
+            document.getElementById('gameContainer').appendChild(app.view);
+            
+            // Set canvas ID to maintain compatibility with CSS
+            app.view.id = 'raceCanvas';
+            
+            // Create main containers
+            waterContainer = new PIXI.Container();
+            boatsContainer = new PIXI.Container();
+            finishLineContainer = new PIXI.Container();
+            
+            app.stage.addChild(waterContainer);
+            app.stage.addChild(finishLineContainer);
+            app.stage.addChild(boatsContainer);
+            
+            // Set dimensions
+            waterHeight = window.innerHeight * 0.9;
+            finishX = window.innerWidth * 3;
+            waterTop = window.innerHeight - waterHeight;
+            
+            // Load necessary textures
+            loadTextures();
+            
+            // Handle window resize
+            window.addEventListener('resize', onResize);
+        }
+        
+        // Load all required textures
+        function loadTextures() {
+            // Load boat textures
+            const loader = new PIXI.Loader();
+            
+            // Update asset paths for GitHub Pages
+            for (let i = 1; i <= 10; i++) {
+                loader.add(`boat${i}`, `./assets/images/boat${i}.png`);
+            }
+            
+            // Remove problematic external texture loading
+            // Instead we'll create our own displacement map texture programmatically
+            
+            loader.onError.add((error, _loader, resource) => {
+                console.error("Error loading resource:", error.message);
+                
+                // Create fallback textures if boat textures fail to load
+                if (resource.name.startsWith('boat')) {
+                    const boatNum = resource.name.replace('boat', '');
+                    createFallbackBoatTexture(boatNum);
+                }
+            });
+            
+            loader.load((loader, resources) => {
+                // Store boat textures
+                for (let i = 1; i <= 10; i++) {
+                    const resourceName = `boat${i}`;
+                    if (resources[resourceName]) {
+                        textures[resourceName] = resources[resourceName].texture;
+                    } else {
+                        // Create fallback if the texture didn't load properly
+                        createFallbackBoatTexture(i);
+                    }
+                }
+                
+                // Create our own displacement texture instead of loading an external one
+                createCustomDisplacementTexture();
+                
+                // Setup the initial scene
+                createScene();
+            });
+        }
+        
+        // Create a custom displacement texture for water effects - improved for lake-like appearance
+        function createCustomDisplacementTexture() {
+            // Create a canvas for the displacement map
+            const canvas = document.createElement('canvas');
+            const size = 256; // Larger size for broader waves
+            canvas.width = size;
+            canvas.height = size;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Create more lake-like wave patterns
+            // Use broader, more horizontal wave patterns
+            
+            // First wave set - main horizontal waves
+            const waveCount = 5; // Fewer, broader waves
+            for (let i = 0; i < waveCount; i++) {
+                const y = (i + 0.5) * (size / waveCount);
+                ctx.beginPath();
+                
+                // Draw a gentle, horizontal-dominant wave
+                for (let x = 0; x < size; x++) {
+                    const amplitude = 30;
+                    const frequency = size / 400; // Much lower frequency
+                    // Generate smoother wave patterns
+                    const waveY = y + Math.sin(x * frequency / 10) * amplitude;
+                    
+                    if (x === 0) {
+                        ctx.moveTo(x, waveY);
+                    } else {
+                        ctx.lineTo(x, waveY);
+                    }
+                }
+                
+                // Set wave line style
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.7 - i * 0.1})`;
+                ctx.lineWidth = 30 + i * 5; // Much thicker lines for broader effects
+                ctx.stroke();
+            }
+            
+            // Second set - subtle cross-waves
+            for (let i = 0; i < 3; i++) {
+                const x = (i + 0.5) * (size / 3);
+                ctx.beginPath();
+                
+                for (let y = 0; y < size; y++) {
+                    const amplitude = 15;
+                    const frequency = size / 500;
+                    // These waves are more subtle
+                    const waveX = x + Math.sin(y * frequency / 15) * amplitude;
+                    
+                    if (y === 0) {
+                        ctx.moveTo(waveX, y);
+                    } else {
+                        ctx.lineTo(waveX, y);
+                    }
+                }
+                
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 20;
+                ctx.stroke();
+            }
+            
+            // Create texture from canvas
+            const displacementTexture = PIXI.Texture.from(canvas);
+            
+            // Create displacement sprite
+            displacementSprite = new PIXI.Sprite(displacementTexture);
+            displacementSprite.texture.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;
+            displacementSprite.anchor.set(0.5);
+            displacementSprite.x = app.renderer.width / 2;
+            displacementSprite.y = waterTop + waterHeight / 2;
+            displacementSprite.scale.set(3); // Adjusted scale for broader waves
+            
+            // Create displacement filter with reduced intensity
+            waterDisplacementFilter = new PIXI.filters.DisplacementFilter(displacementSprite);
+            waterDisplacementFilter.scale.x = 8; // Much gentler displacement
+            waterDisplacementFilter.scale.y = 4; // Even gentler vertical displacement
+            
+            // Add the sprite to water container for displacement effect
+            waterContainer.addChild(displacementSprite);
+        }
+        
+        // Create a fallback texture if a boat texture fails to load
+        function createFallbackBoatTexture(boatNum) {
+            // Create a colored rectangle with text as fallback
+            const graphics = new PIXI.Graphics();
+            graphics.beginFill(getBoatColor(boatNum));
+            graphics.drawRect(0, 0, 200, 100);
+            graphics.endFill();
+            
+            // Add boat number text
+            const text = new PIXI.Text(`Boat ${boatNum}`, {
+                fontFamily: 'Arial',
+                fontSize: 24,
+                fill: 'white',
+                align: 'center'
+            });
+            text.anchor.set(0.5);
+            text.position.set(100, 50);
+            
+            // Create a container for the graphics and text
+            const container = new PIXI.Container();
+            container.addChild(graphics);
+            container.addChild(text);
+            
+            // Generate texture from container
+            const renderTexture = PIXI.RenderTexture.create({
+                width: 200,
+                height: 100
+            });
+            app.renderer.render(container, renderTexture);
+            
+            // Store the texture
+            textures[`boat${boatNum}`] = renderTexture;
+        }
+        
+        // Get a color based on boat number
+        function getBoatColor(boatNum) {
+            const colors = [
+                0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 
+                0xFF00FF, 0x00FFFF, 0xFF8000, 0x8000FF, 
+                0x0080FF, 0xFF0080
+            ];
+            return colors[(boatNum - 1) % colors.length];
+        }
+        
+        // Create the scene with water, sky, and finish line
+        function createScene() {
+            // Clear any existing scene elements
+            app.stage.removeChildren();
+            
+            // Create gradient sky
+            createSky();
+            
+            // Create water layers with consistent appearance
+            createWater();
+            
+            // Create finish line
+            createFinishLine();
+            
+            // Ensure water container is properly positioned
+            waterContainer.position.set(0, 0);
+            
+            // Add containers in correct order
+            app.stage.addChild(waterContainer);
+            app.stage.addChild(finishLineContainer);
+            app.stage.addChild(boatsContainer);
+        }
+        
+        // Create sky background
+        function createSky() {
+            const skyHeight = window.innerHeight - waterHeight;
+            
+            const sky = new PIXI.Graphics();
+            sky.beginFill(0x74ccf4);
+            sky.drawRect(0, 0, window.innerWidth, skyHeight);
+            sky.endFill();
+            
+            // Add sky gradient
+            const gradientTexture = createSkyGradientTexture();
+            const skyGradient = new PIXI.Sprite(gradientTexture);
+            skyGradient.width = window.innerWidth;
+            skyGradient.height = skyHeight;
+            
+            app.stage.addChildAt(sky, 0);
+            app.stage.addChildAt(skyGradient, 1);
+        }
+        
+        // Create a gradient texture for the sky
+        function createSkyGradientTexture() {
+            const quality = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = quality;
+            
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, quality);
+            
+            gradient.addColorStop(0, '#87CEEB'); // Light blue at top
+            gradient.addColorStop(1, '#5ABCD8'); // Darker blue at bottom
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1, quality);
+            
+            return PIXI.Texture.from(canvas);
+        }
+        
+        // Create water layers with effects
+        function createWater() {
+            waterContainer.removeChildren();
+            
+            const extraWidth = window.innerWidth * 4;
+            
+            // Base water color - consistent deep blue
+            const waterBackground = new PIXI.Graphics();
+            waterBackground.beginFill(0x0e4270);
+            waterBackground.drawRect(-extraWidth, waterTop, window.innerWidth + (extraWidth * 2), waterHeight);
+            waterBackground.endFill();
+            
+            waterContainer.addChild(waterBackground);
+            
+            // Create consistent water gradient
+            const waterGradient = new PIXI.Sprite(createWaterGradientTexture());
+            waterGradient.width = window.innerWidth + (extraWidth * 2);
+            waterGradient.x = -extraWidth;
+            waterGradient.height = waterHeight;
+            waterGradient.y = waterTop;
+            waterGradient.alpha = 0.7;
+            
+            waterContainer.addChild(waterGradient);
+            
+            // Create wave layers
+            createWaveLayers();
+            
+            // Create water sparkles
+            createWaterSparkles();
+            
+            // Add displacement sprite if it exists
+            if (displacementSprite) {
+                waterContainer.addChild(displacementSprite);
+                waterContainer.filters = [waterDisplacementFilter];
+            }
+        }
+        
+        // Create gradient texture for water with more depth - make it more opaque
+        function createWaterGradientTexture() {
+            const quality = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = quality;
+            
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, quality);
+            
+            // More opaque water with darker colors for lake-like appearance
+            gradient.addColorStop(0, 'rgba(30, 122, 201, 0.9)'); // Much more opaque top
+            gradient.addColorStop(0.1, 'rgba(30, 122, 201, 0.85)'); // Much more opaque transition
+            gradient.addColorStop(0.3, 'rgba(0, 90, 148, 0.9)'); // Deeper lake blue
+            gradient.addColorStop(0.7, 'rgba(0, 51, 102, 0.95)'); // Very deep blue
+            gradient.addColorStop(1, 'rgba(0, 20, 50, 1.0)'); // Nearly solid deep blue
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1, quality);
+            
+            return PIXI.Texture.from(canvas);
+        }
+        
+        // Create multiple animated wave layers with improved appearance
+        function createWaveLayers() {
+            waterGraphics = [];
+            
+            // Add more intense wave layers
+            for (let i = 0; i < 5; i++) {
+                const wavesGraphics = new PIXI.Graphics();
+                const opacity = 0.12 + (i * 0.04); // Increased opacity
+                wavesGraphics.lineStyle(2 + i, 0xFFFFFF, opacity);
+                waterGraphics.push(wavesGraphics);
+                waterContainer.addChild(wavesGraphics);
+            }
+        }
+        
+        // Create water sparkle effects with rectangular shapes
+        function createWaterSparkles() {
+            // Clear existing sparkles
+            waterSparkles.forEach(sparkle => {
+                if (sparkle.parent) sparkle.parent.removeChild(sparkle);
+            });
+            waterSparkles = [];
+            
+            // Create new sparkles - fewer and more random for lake-like effect
+            const sparkleCount = Math.floor(window.innerWidth / 200); // Fewer sparkles
+            
+            for (let i = 0; i < sparkleCount; i++) {
+                const sparkle = new PIXI.Graphics();
+                // Use tiny rectangles instead of circles
+                sparkle.beginFill(0xFFFFFF, 0.5);
+                
+                // Small rectangles for sparkles
+                const size = 0.8 + Math.random() * 1.2;
+                sparkle.drawRect(-size/2, -size/2, size, size);
+                sparkle.endFill();
+                
+                sparkle.x = Math.random() * window.innerWidth;
+                sparkle.y = waterTop + Math.random() * (waterHeight * 0.4);
+                sparkle.alpha = Math.random() * 0.3 + 0.1; // Subtle
+                
+                // Add rotation for variety
+                sparkle.rotation = Math.random() * Math.PI;
+                
+                // Slower animation data
+                sparkle.animationSpeed = Math.random() * 0.01 + 0.005;
+                sparkle.animationOffset = Math.random() * Math.PI * 2;
+                
+                waterSparkles.push(sparkle);
+                waterContainer.addChild(sparkle);
+            }
+        }
+        
+        // Create finish line
+        function createFinishLine() {
+            finishLineContainer.removeChildren();
+            
+            // Create finish line on water
+            const finishLine = new PIXI.Graphics();
+            finishLine.lineStyle(4, 0xFFFFFF, 0.8);
+            finishLine.moveTo(finishX, waterTop);
+            finishLine.lineTo(finishX, window.innerHeight);
+            
+            // Create dashed effect
+            for (let y = waterTop; y < window.innerHeight; y += 30) {
+                finishLine.lineStyle(4, 0x000000, 0.8);
+                finishLine.moveTo(finishX, y);
+                finishLine.lineTo(finishX, y + 15);
+            }
+            
+            finishLineContainer.addChild(finishLine);
+            
+            // Add finish flag
+            createFinishFlag();
+        }
+        
+        // Create checkered finish flag
+        function createFinishFlag() {
+            const flagHeight = 80;
+            const flagWidth = 40;
+            const poleHeight = flagHeight + 20;
+            
+            // Create flag pole
+            const pole = new PIXI.Graphics();
+            pole.beginFill(0x8B4513);
+            pole.drawRect(finishX - 2, waterTop - poleHeight, 5, poleHeight);
+            pole.endFill();
+            
+            finishLineContainer.addChild(pole);
+            
+            // Create checkered flag texture
+            const flagTexture = createCheckerTexture();
+            
+            // Create flag sprite
+            const flag = new PIXI.Sprite(flagTexture);
+            flag.width = flagWidth;
+            flag.height = flagHeight;
+            flag.position.set(finishX + 3, waterTop - flagHeight);
+            
+            // Add to scene
+            finishLineContainer.addChild(flag);
+        }
+        
+        // Create checkered texture for flag
+        function createCheckerTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 80;
+            canvas.height = 80;
+            const ctx = canvas.getContext('2d');
+            
+            const squareSize = 10;
+            for (let x = 0; x < canvas.width; x += squareSize) {
+                for (let y = 0; y < canvas.height; y += squareSize) {
+                    ctx.fillStyle = ((x / squareSize + y / squareSize) % 2 === 0) ? 'white' : 'black';
+                    ctx.fillRect(x, y, squareSize, squareSize);
+                }
+            }
+            
+            return PIXI.Texture.from(canvas);
+        }
+        
+        // Handle window resize
+        function onResize() {
+            // Update app dimensions
+            app.renderer.resize(window.innerWidth, window.innerHeight);
+            
+            // Update water dimensions
+            waterHeight = window.innerHeight * 0.9;
+            waterTop = window.innerHeight - waterHeight;
+            finishX = window.innerWidth * 3;
+            
+            // Recreate scene elements
+            createScene();
+            
+            // Update boat positions if race is in progress
+            if (raceInProgress) {
+                const totalBoats = boats.length;
+                
+                boats.forEach((boat, index) => {
+                    updateBoatDimensions(boat, index, totalBoats);
+                });
+            }
+            
+            // Update displacement sprite position
+            if (displacementSprite) {
+                displacementSprite.x = app.renderer.width / 2;
+                displacementSprite.y = waterTop + waterHeight / 2;
+            }
+        }
+        
+        // Create team checkboxes 
+        function createTeamSelectors() {
+            const teamSelectors = document.getElementById('teamSelectors');
+            teamSelectors.innerHTML = ''; // Clear any existing
+            
+            for (let i = 1; i <= 10; i++) {
+                const div = document.createElement('div');
+                div.className = 'team-select';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `team${i}`;
+                checkbox.value = i;
+                
+                const label = document.createElement('label');
+                label.htmlFor = `team${i}`;
+                label.textContent = `Team ${i}`;
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                teamSelectors.appendChild(div);
+            }
+        }
+        
+        // Handler for select all/none checkboxes
+        function selectAll(selected) {
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = selected);
+        }
+        
+        // Update boat dimensions based on index and total boats
+        function updateBoatDimensions(boat, index, totalBoats) {
+            // Calculate boat size - make them a bit bigger
+            const boatHeight = app.renderer.height / 6;
+            const boatWidth = boatHeight * (2517/1615); // Maintain aspect ratio
+            
+            // Calculate vertical position with more accurate water placement
+            const waterAreaForBoats = waterHeight * 0.95;
+            const startFromTop = waterTop + (waterHeight * 0.15);
+            
+            // Increase spacing between boats
+            const yPosition = startFromTop + (index + 0.5) * (waterAreaForBoats / (totalBoats + 0.5));
+            
+            // Update boat properties
+            boat.sprite.width = boatWidth;
+            boat.sprite.height = boatHeight;
+            
+            // Position boat to submerge correctly in water - move it up so more is underwater
+            boat.sprite.y = yPosition - boatHeight * 0.2; // Adjusted to show more boat underwater
+            
+            // Store dimensions for reference
+            boat.width = boatWidth;
+            boat.height = boatHeight;
+            boat.yPosition = yPosition;
+            
+            // Set water line to be at a higher point on the boat (more submersion)
+            // This is the Y position where water should meet the boat
+            boat.waterLineY = yPosition; // Water line at the boat's center line
+        }
+        
+        // Start the race
+        function startRace() {
+            if (raceInProgress) return;
+            
+            // Reset camera position
+            cameraX = 0;
+            targetCameraX = 0;
+            
+            // Reset container positions
+            waterContainer.x = 0;
+            boatsContainer.x = 0;
+            finishLineContainer.x = 0;
+            
+            // Reset finished boats
+            finishedBoats = [];
+            
+            // Update UI elements
+            const controls = document.getElementById('controls');
+            const raceProgress = document.getElementById('raceProgress');
+            
+            controls.classList.add('controls-hidden');
+            raceProgress.style.display = 'block';
+            
+            // Clear existing boats
+            clearRace();
+            
+            raceInProgress = true;
+            
+            // Get selected teams
+            const selectedTeams = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(cb => parseInt(cb.value));
+            
+            // Validate selection
+            if (selectedTeams.length === 0) {
+                alert('Please select at least one team!');
+                controls.classList.remove('controls-hidden');
+                raceProgress.style.display = 'none';
+                raceInProgress = false;
+                return;
+            }
+            
+            // Create boats for selected teams
+            selectedTeams.forEach((team, index) => {
+                const boat = createBoat(team, index, selectedTeams.length);
+                boats.push(boat);
+            });
+            
+            // Start animation ticker
+            app.ticker.add(gameLoop);
+        }
+        
+        // Create boat sprite with wake effect and underwater appearance - improved layering
+        function createBoat(team, index, totalBoats) {
+            const boatContainer = new PIXI.Container();
+            
+            const boatSprite = new PIXI.Sprite(textures[`boat${team}`] || PIXI.Texture.WHITE);
+            boatSprite.anchor.set(0.5, 0.5);
+            
+            const wake = createBoatWake();
+            const waterOverlay = new PIXI.Graphics();
+            const underwaterEffect = new PIXI.Graphics(); // Changed to Graphics for direct rendering
+            
+            // Changed layer order - wake at bottom, boat in middle, effects on top
+            boatsContainer.addChild(wake);           // Bottom layer
+            boatsContainer.addChild(boatContainer);  // Middle layer - actual boat
+            boatsContainer.addChild(waterOverlay);   // Water effects layer
+            boatsContainer.addChild(underwaterEffect); // Top layer - underwater tint
+            
+            boatContainer.addChild(boatSprite);
+            
+            const boat = {
+                team,
+                container: boatContainer,
+                sprite: boatSprite,
+                wake,
+                waterOverlay,
+                underwaterEffect,
+                x: 100, // Start boats closer to left edge
+                speed: 0.8 + Math.random() * 0.2,
+                finished: false,
+                splashes: []
+            };
+            
+            updateBoatDimensions(boat, index, totalBoats);
+            return boat;
+        }
+        
+        // Create boat wake graphics
+        function createBoatWake() {
+            const wake = new PIXI.Graphics();
+            wake.alpha = 0.6;
+            return wake;
+        }
+        
+        // Clear all race elements
+        function clearRace() {
+            // Remove all boat elements
+            boats.forEach(boat => {
+                boatsContainer.removeChild(boat.container);
+                boatsContainer.removeChild(boat.wake);
+                boatsContainer.removeChild(boat.underwaterEffect);
+                boatsContainer.removeChild(boat.waterOverlay);
+                
+                // Remove any splash particles
+                boat.splashes.forEach(splash => {
+                    if (splash.parent) boatsContainer.removeChild(splash);
+                });
+            });
+            
+            // Clear boats array
+            boats = [];
+            
+            // Remove game loop
+            app.ticker.remove(gameLoop);
+        }
+        
+        // Main game loop function
+        function gameLoop(delta) {
+            animateWater();
+            boats.sort((a, b) => a.sprite.y - b.sprite.y);
+            
+            // Find leading and trailing boats
+            let leadX = -Infinity;
+            let trailX = Infinity;
+            boats.forEach(boat => {
+                if (boat.x > leadX) leadX = boat.x;
+                if (boat.x < trailX) trailX = boat.x;
+            });
+            
+            // Calculate rubber banding effect
+            const distance = leadX - trailX;
+            const rubberBandThreshold = window.innerWidth * 0.8;
+            
+            // Keep boats in view with smoother camera
+            const viewportCenter = window.innerWidth * 0.3;
+            const finishLineOffset = window.innerWidth * 0.35;
+            const cameraTarget = leadX - viewportCenter;
+            
+            // Allow camera to go past finish line
+            const maxScroll = finishX - window.innerWidth + finishLineOffset;
+            targetCameraX = -Math.max(0, Math.min(cameraTarget, maxScroll));
+            
+            // Smoother camera
+            cameraX += (targetCameraX - cameraX) * 0.02;
+            
+            // Apply camera position
+            waterContainer.x = cameraX;
+            boatsContainer.x = cameraX;
+            finishLineContainer.x = cameraX;
+            
+            // Global time for animation
+            const time = Date.now() * 0.001;
+            
+            // Update boats
+            boats.forEach((boat, index) => {
+                if (!boat.finished) {
+                    const raceProgress = boat.x / finishX;
+                    
+                    // Initialize boat animation state if needed
+                    if (!boat.animation) {
+                        boat.animation = {
+                            bobOffset: Math.random() * Math.PI * 2,
+                            bobFreq: 0.8 + Math.random() * 0.4,
+                            lastY: 0,
+                            lastRotation: 0,
+                            targetY: 0,
+                            targetRotation: 0
+                        };
+                    }
+                    
+                    const progressBoost = 1 + (raceProgress * 0.3);
+                    const baseSpeed = (finishX / 1100) * delta;
+                    
+                    let speedMultiplier = 1;
+                    
+                    if (distance > rubberBandThreshold * 0.5) {
+                        const positionInPack = (boat.x - trailX) / distance;
+                        if (positionInPack < 0.5) {
+                            speedMultiplier = 1.3 + (0.5 - positionInPack) * 0.8;
+                        } else if (positionInPack > 0.7) {
+                            speedMultiplier = 0.7;
+                        }
+                    }
+                    
+                    if (!boat.lastSpeed) boat.lastSpeed = boat.speed;
+                    boat.lastSpeed = boat.lastSpeed * 0.85 + boat.speed * 0.15;
+                    boat.x += boat.lastSpeed * baseSpeed * speedMultiplier * progressBoost;
+                    boat.container.x = boat.x;
+                    
+                    if (Math.random() < 0.02) {
+                        const variation = (Math.random() - 0.5) * 0.1;
+                        boat.speed = Math.max(0.8, Math.min(1.3, boat.speed * (1 + variation)));
+                    }
+                    
+                    boat.speed = Math.max(0.8, Math.min(1.3, boat.speed));
+                    
+                    updateBoatWake(boat, time);
+                    updateWaterOverlay(boat, time);
+                    updateUnderwaterEffect(boat, time);
+                    
+                    if (boat.x >= finishX) {
+                        boat.finished = true;
+                        finishedBoats.push(boat);
+                    }
+                }
+            });
+            
+            // Check if all boats have finished
+            if (boats.every(boat => boat.finished) && boats.length > 0) {
+                endRace();
+            }
+        }
+        
+        // Animate water elements with improved lake-like effects
+        function animateWater() {
+            const time = Date.now() * 0.001;
+            
+            // Animate displacement map for more natural lake wave movement
+            // Slower and more subtle movement
+            if (displacementSprite) {
+                displacementSprite.x = app.renderer.width / 2 - cameraX;
+                displacementSprite.y = waterTop + waterHeight / 2;
+                
+                // Gentle variation in wave intensity
+                // Using much smaller multipliers for the sine wave variations
+                waterDisplacementFilter.scale.x = 12 + Math.sin(time * 0.1) * 4;
+                waterDisplacementFilter.scale.y = 8 + Math.cos(time * 0.08) * 2;
+            }
+            
+            // Animate wave lines with more lake-like patterns
+            waterGraphics.forEach((graphics, i) => {
+                graphics.clear();
+                graphics.lineStyle(2 + i, 0xFFFFFF, 0.12 + (i * 0.04));
+                
+                const extraWidth = window.innerWidth * 2;
+                const startX = -extraWidth - cameraX;
+                const endX = window.innerWidth + extraWidth - cameraX;
+                
+                // Lower amplitude for gentler waves
+                const amplitude = 1 + i * 1.5;
+                // Lower frequency for broader waves
+                const frequency = 0.01 - (i * 0.0015);
+                // Slower speed for lake-like movement
+                const speed = 0.05 + (i * 0.02);
+                // Space waves more evenly
+                const yPos = waterTop + (waterHeight * 0.15) + (i * waterHeight * 0.18);
+                
+                graphics.moveTo(startX, yPos);
+                
+                // Draw smoother wave lines
+                for (let x = startX; x <= endX; x += 15) { // Lower resolution for smoother waves
+                    // Generate broader, gentler waves
+                    const y = yPos + 
+                          Math.sin(x * frequency + time * speed) * amplitude +
+                          Math.sin(x * frequency * 1.5 + time * (speed * 0.5)) * (amplitude * 0.2);
+                    graphics.lineTo(x, y);
+                }
+            });
+            
+            // Animate water sparkles with slower, more subtle patterns
+            waterSparkles.forEach(sparkle => {
+                // More subtle shine variations
+                sparkle.alpha = 0.15 + Math.sin(time * sparkle.animationSpeed + sparkle.animationOffset) * 0.2;
+                // Slower movement
+                sparkle.x += (Math.sin(time * 0.3 + sparkle.animationOffset) * 0.15);
+                
+                // Reset sparkle if it goes off screen
+                if (sparkle.x + cameraX > window.innerWidth) {
+                    sparkle.x = -cameraX;
+                } else if (sparkle.x + cameraX < 0) {
+                    sparkle.x = window.innerWidth - cameraX;
+                }
+            });
+        }
+        
+        // Update boat wake effect - NO circles
+        function updateBoatWake(boat, time) {
+            const wake = boat.wake;
+            wake.clear();
+            
+            if (boat.x > 0) {
+                const waterLineY = boat.waterLineY;
+                const boatFront = boat.x + boat.width * 0.35; // Front of boat
+                const boatRear = boat.x - boat.width * 0.35;  // Rear of boat
+                
+                // Create wake trail
+                const wakeLength = 100 + (boat.speed * 100); // Total length of wake
+                const segments = 12;
+                const wakePoints = [];
+                
+                // Generate wake center points
+                for (let i = 0; i <= segments; i++) {
+                    const distanceFactor = i / segments;
+                    const distance = distanceFactor * wakeLength;
+                    
+                    // Calculate wake position with meandering effect
+                    const centerOffset = Math.sin(time * 0.5 + distanceFactor * 8) * (distanceFactor * 15);
+                    
+                    wakePoints.push({
+                        x: boatRear - distance,
+                        y: waterLineY + centerOffset,
+                        width: 25 * (1 - distanceFactor) + 5, // Wake narrows with distance
+                        opacity: 0.6 * (1 - distanceFactor * 0.8) // Fade gradually
+                    });
+                }
+                
+                // Draw wake segments as connected shapes for smoother effect
+                for (let i = 0; i < segments; i++) {
+                    const current = wakePoints[i];
+                    const next = wakePoints[i + 1];
+                    
+                    wake.beginFill(0xFFFFFF, current.opacity);
+                    
+                    // Draw more organic wake shape connecting between points
+                    wake.moveTo(current.x, current.y - current.width * 0.3);
+                    wake.lineTo(next.x, next.y - next.width * 0.3);
+                    wake.lineTo(next.x, next.y + next.width * 0.3);
+                    wake.lineTo(current.x, current.y + current.width * 0.3);
+                    
+                    wake.endFill();
+                }
+                
+                // Add wake foam/turbulence as rectangles instead of circles
+                for (let i = 0; i < 25; i++) { // Fewer particles
+                    const distanceFactor = Math.random();
+                    const dist = distanceFactor * wakeLength * 0.8;
+                    
+                    // Calculate foam position with reference to wake centerline
+                    const wakeSegment = Math.floor(distanceFactor * segments);
+                    const wakePoint = wakePoints[wakeSegment];
+                    
+                    const spread = (Math.random() - 0.5) * 2 * wakePoint.width;
+                    
+                    // Use tiny rectangles instead of circles
+                    wake.beginFill(0xFFFFFF, 0.4 + Math.random() * 0.3);
+                    const rectSize = 1 + Math.random() * 2;
+                    wake.drawRect(
+                        boatRear - dist - rectSize/2,
+                        wakePoint.y + spread - rectSize/2,
+                        rectSize,
+                        rectSize
+                    );
+                    wake.endFill();
+                }
+                
+                // Update any existing splash particles
+                updateSplashes(boat);
+            }
+        }
+        
+        // Create a splash effect - with higher opacity
+        function createSplash(boat, x, y) {
+            const splash = new PIXI.Graphics();
+            splash.beginFill(0xFFFFFF, 1.0); // Fully opaque
+            
+            // Use a small rectangle instead of a circle
+            splash.drawRect(-1, -1, 2, 2);
+            splash.endFill();
+            
+            splash.x = x;
+            splash.y = y;
+            splash.vx = -1 + Math.random() * 2;
+            splash.vy = -3 - Math.random() * 2;
+            splash.age = 0;
+            splash.maxAge = 30 + Math.random() * 20;
+            
+            boat.splashes.push(splash);
+            boatsContainer.addChild(splash);
+        }
+        
+        // Update splash particles with higher opacity
+        function updateSplashes(boat) {
+            for (let i = boat.splashes.length - 1; i >= 0; i--) {
+                const splash = boat.splashes[i];
+                
+                // Apply gravity and movement
+                splash.x += splash.vx;
+                splash.y += splash.vy;
+                splash.vy += 0.2; // Gravity
+                
+                // Age the splash but keep it fully visible for longer
+                splash.age++;
+                
+                // Very slow fade - maintain high opacity
+                splash.alpha = 1.5 - (splash.age / splash.maxAge * 0.8);
+                
+                // Remove old splashes
+                if (splash.age >= splash.maxAge) {
+                    boatsContainer.removeChild(splash);
+                    boat.splashes.splice(i, 1);
+                }
+            }
+        }
+        
+        // Create and update water overlay - no circular shapes at all
+        function updateWaterOverlay(boat, time) {
+            const overlay = boat.waterOverlay;
+            overlay.clear();
+            
+            const waterLineY = boat.waterLineY;
+            
+            // Get boat dimensions
+            const boatWidth = boat.width * 0.7;
+            const boatLeft = boat.x - boatWidth / 2;
+            const boatRight = boat.x + boatWidth / 2;
+            
+            // 1. Create solid water line that follows the hull shape - no circles
+            overlay.lineStyle(2, 0xFFFFFF, 0.4);
+            
+            // Create a continuous line that follows the hull shape
+            overlay.moveTo(boatLeft - 5, waterLineY);
+            
+            // Draw gentler wavy water line across the boat width
+            const segments = 15;
+            for (let i = 0; i <= segments; i++) {
+                const progress = i / segments;
+                const x = boatLeft - 5 + (boatWidth + 10) * progress;
+                
+                // Use a more subtle wave effect for lake-like water
+                const y = waterLineY + Math.sin(time * 1.5 + progress * 3) * 1.0;
+                overlay.lineTo(x, y);
+            }
+            
+            overlay.lineStyle(0); // Reset line style
+            
+            // 2. Add a rectangular water splash effect at the front (bow) - NO CIRCLES
+            overlay.beginFill(0xFFFFFF, 0.6);
+            
+            // Use a triangle shape instead of circle/ellipse for the bow splash
+            const bowSplashWidth = 14;
+            const bowSplashHeight = 6;
+            
+            // Draw a triangular splash instead of an elliptical one
+            overlay.moveTo(boatRight, waterLineY - 1);
+            overlay.lineTo(boatRight + bowSplashWidth, waterLineY);
+            overlay.lineTo(boatRight, waterLineY + 2);
+            overlay.endFill();
+            
+            // 3. Add water displacement at the sides (using small rectangles)
+            [
+                { x: boatLeft - 6, y: waterLineY - 1, width: 8, height: 2 },
+                { x: boatRight, y: waterLineY - 1, width: 8, height: 2 }
+            ].forEach(pos => {
+                overlay.beginFill(0xFFFFFF, 0.5);
+                overlay.drawRect(
+                    pos.x, 
+                    pos.y,
+                    pos.width, 
+                    pos.height
+                );
+                overlay.endFill();
+            });
+            
+            // 4. Create occasional splash particles
+            if (Math.random() < 0.05) {
+                const splashX = boatRight - 5;
+                const splashY = waterLineY - 5;
+                createSplash(boat, splashX, splashY);
+            }
+            
+            // 5. Add a rectangular wake trail behind the boat
+            overlay.beginFill(0xFFFFFF, 0.45);
+            
+            overlay.drawRect(
+                boatLeft - 30,
+                waterLineY - 1,
+                25,
+                2
+            );
+            
+            overlay.endFill();
+        }
+        
+        // Update underwater effect - simplified to just show a dark blue tint
+        function updateUnderwaterEffect(boat, time) {
+            boat.underwaterEffect.removeChildren();
+            
+            const waterLineY = boat.waterLineY;
+            boat.underwaterEffect.x = boat.container.x;
+            boat.underwaterEffect.y = boat.container.y;
+            boat.underwaterEffect.rotation = boat.container.rotation;
+            
+            // Create a sprite using same texture as boat
+            const tintSprite = new PIXI.Sprite(boat.sprite.texture);
+            tintSprite.anchor.set(0.5, 0.5);
+            tintSprite.width = boat.width;
+            tintSprite.height = boat.height;
+            tintSprite.tint = 0x000022; // Much darker blue
+            tintSprite.alpha = 0.85;    // More opaque
+            
+            // Create mask for water line
+            const waterMask = new PIXI.Graphics();
+            waterMask.beginFill(0xFFFFFF);
+            waterMask.moveTo(-boat.width, waterLineY - boat.container.y);
+            waterMask.lineTo(boat.width, waterLineY - boat.container.y);
+            waterMask.lineTo(boat.width, boat.height);
+            waterMask.lineTo(-boat.width, boat.height);
+            waterMask.endFill();
+            
+            boat.underwaterEffect.addChild(tintSprite);
+            boat.underwaterEffect.addChild(waterMask);
+            tintSprite.mask = waterMask;
+        }
+        
+        // Handle race end
+        function endRace() {
+            raceInProgress = false;
+            
+            // Remove game loop
+            app.ticker.remove(gameLoop);
+            
+            // Hide race progress indicator
+            document.getElementById('raceProgress').style.display = 'none';
+            
+            // Show results screen
+            showResults();
+        }
+        
+        // Hide results screen
+        function hideResults() {
+            document.getElementById('resultsScreen').style.display = 'none';
+            document.getElementById('controls').classList.remove('controls-hidden');
+        }
+        
+        // Show race results
+        function showResults() {
+            const resultsScreen = document.getElementById('resultsScreen');
+            const resultsList = document.getElementById('resultsList');
+            
+            // Clear previous results
+            resultsList.innerHTML = '';
+            
+            // Add results items
+            finishedBoats.forEach((boat, index) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                
+                // Position indicator
+                const position = document.createElement('div');
+                position.className = `position position-${index < 3 ? index + 1 : 'other'}`;
+                position.textContent = index + 1;
+                
+                // Boat image
+                const boatImg = document.createElement('img');
+                boatImg.src = `./assets/images/boat${boat.team}.png`;
+                boatImg.className = 'mini-boat';
+                
+                // Team name
+                const teamName = document.createElement('div');
+                teamName.className = 'team-name';
+                teamName.textContent = `Team ${boat.team}`;
+                
+                // Assemble result item
+                resultItem.appendChild(position);
+                resultItem.appendChild(boatImg);
+                resultItem.appendChild(teamName);
+                resultsList.appendChild(resultItem);
+            });
+            
+            // Show results screen
+            resultsScreen.style.display = 'block';
+        }
+        
+        // Initialize everything
+        initPixiApp();
+        createTeamSelectors();
+    </script>
+</body>
+</html>
